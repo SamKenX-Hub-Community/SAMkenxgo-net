@@ -14,6 +14,16 @@ import (
 	"testing"
 )
 
+// https://github.com/golang/go/issues/58246
+const issue58246 = `<!--[if gte mso 12]>
+  <xml>
+      <o:OfficeDocumentSettings>
+      <o:AllowPNG/>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+<![endif]-->`
+
 type tokenTest struct {
 	// A short description of the test case.
 	desc string
@@ -314,7 +324,7 @@ var tokenTests = []tokenTest{
 	{
 		"comment3",
 		"a<!--x>-->z",
-		"a$<!--x&gt;-->$z",
+		"a$<!--x>-->$z",
 	},
 	{
 		"comment4",
@@ -334,7 +344,7 @@ var tokenTests = []tokenTest{
 	{
 		"comment7",
 		"a<!---<>z",
-		"a$<!---&lt;&gt;z-->",
+		"a$<!---<>z-->",
 	},
 	{
 		"comment8",
@@ -389,12 +399,12 @@ var tokenTests = []tokenTest{
 	{
 		"comment18",
 		"a<!--<!-->z",
-		"a$<!--&lt;!-->$z",
+		"a$<!--<!-->$z",
 	},
 	{
 		"comment19",
 		"a<!--<!--",
-		"a$<!--&lt;!-->",
+		"a$<!--<!-->",
 	},
 	{
 		"comment20",
@@ -409,7 +419,89 @@ var tokenTests = []tokenTest{
 	{
 		"comment22",
 		"a<!--!--!<--!-->z",
-		"a$<!--!--!&lt;--!-->$z",
+		"a$<!--!--!<--!-->$z",
+	},
+	{
+		"comment23",
+		"a<!--&gt;-->z",
+		"a$<!--&gt;-->$z",
+	},
+	{
+		"comment24",
+		"a<!--&gt;>x",
+		"a$<!--&gt;>x-->",
+	},
+	{
+		"comment25",
+		"a<!--&gt;&gt;",
+		"a$<!--&gt;>-->",
+	},
+	{
+		"comment26",
+		"a<!--&gt;&gt;-",
+		"a$<!--&gt;>-->",
+	},
+	{
+		"comment27",
+		"a<!--&gt;&gt;-->z",
+		"a$<!--&gt;>-->$z",
+	},
+	{
+		"comment28",
+		"a<!--&amp;&gt;-->z",
+		"a$<!--&amp;>-->$z",
+	},
+	{
+		"comment29",
+		"a<!--&amp;gt;-->z",
+		"a$<!--&amp;gt;-->$z",
+	},
+	{
+		"comment30",
+		"a<!--&nosuchentity;-->z",
+		"a$<!--&amp;nosuchentity;-->$z",
+	},
+	{
+		"comment31",
+		"a<!--i>>j-->z",
+		"a$<!--i>>j-->$z",
+	},
+	{
+		"comment32",
+		"a<!--i!>>j-->z",
+		"a$<!--i!&gt;>j-->$z",
+	},
+	// https://stackoverflow.design/email/base/mso/#targeting-specific-outlook-versions
+	// says "[For] Windows Outlook 2003 and above... conditional comments allow
+	// us to add bits of HTML that are only read by the Word-based versions of
+	// Outlook". These comments (with angle brackets) should pass through
+	// unchanged (by this Go package) when rendering.
+	//
+	// We should also still escape ">" as "&gt;" when necessary.
+	// https://github.com/golang/go/issues/48237
+	//
+	// The "your code" example below comes from that stackoverflow.design link
+	// above but note that it can contain angle-bracket-rich XML.
+	// https://github.com/golang/go/issues/58246
+	{
+		"issue48237CommentWithAmpgtsemi1",
+		"a<!--<p></p>&lt;!--[video]--&gt;-->z",
+		"a$<!--<p></p><!--[video]--&gt;-->$z",
+	},
+	{
+		"issue48237CommentWithAmpgtsemi2",
+		"a<!--<p></p>&lt;!--[video]--!&gt;-->z",
+		"a$<!--<p></p><!--[video]--!&gt;-->$z",
+	},
+	{
+		"issue58246MicrosoftOutlookComment1",
+		"a<!--[if mso]> your code <![endif]-->z",
+		"a$<!--[if mso]> your code <![endif]-->$z",
+	},
+	{
+		"issue58246MicrosoftOutlookComment2",
+		"a" + issue58246 + "z",
+		"a$" + issue58246 + "$z",
 	},
 	// An attribute with a backslash.
 	{
